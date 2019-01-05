@@ -1,5 +1,6 @@
 #include <iostream>
 #include <complex>
+#include <SDL2/SDL.h>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
@@ -10,6 +11,8 @@ using namespace std::complex_literals;
 // http://warp.povusers.org/Mandelbrot/
 
 int main() {
+    //SDL_in
+    
     // setup range for mandelbrot a.k.a. zoom
     //const complex<double> z_ll = 0.270085 + 0.004440i;
     //const complex<double> z_ur = 0.271000 + 0.004810i;
@@ -25,12 +28,24 @@ int main() {
     const int nx = 1200;
     //const int ny = 100;
     const int ny = (nx * (ymax-ymin))/ (xmax - xmin);
-    const unsigned int maxIter = 1000;
+    const unsigned int maxIter = 200;
     const unsigned int halfMaxIter = maxIter / 2;
 
     double dx = (xmax-xmin) / double(nx);
     double dy = (ymax-ymin) / double(ny);
 
+    //SDL setup
+    if (SDL_Init(SDL_INIT_VIDEO) != 0){
+        std::cerr << "SDL_INIT(SDL_INIT_VIDEO)\n";
+    }
+
+    SDL_Window *window;
+    SDL_Renderer *renderer;
+    SDL_CreateWindowAndRenderer(nx,ny,SDL_WINDOW_OPENGL | SDL_WINDOW_BORDERLESS, &window, &renderer);
+    SDL_SetWindowPosition(window, 500,500);
+    if (window == NULL){
+        std::cerr <<SDL_GetError<<endl;
+    }
     cout<<xmin<<","<<xmax<<","<<ymin<<","<<ymax<<":"<<nx<<","<<ny<<"@"<<dx<<","<<dy<<endl;
 
     const int numChannels = 3;
@@ -71,9 +86,32 @@ int main() {
             imgData[(nx*numChannels)*y + numChannels*x + 0] = ir;
             imgData[(nx*numChannels)*y + numChannels*x + 1] = ig;
             imgData[(nx*numChannels)*y + numChannels*x + 2] = ib;
+            SDL_SetRenderDrawColor(renderer,ir,ig,ib,255);
+            SDL_RenderDrawPoint(renderer,x,y);
         }
     }
-    
+   cout <<"PreRender"<<endl;
+    SDL_RenderPresent(renderer);
+    SDL_Event e;
+    bool quit = false;
+    while (!quit){
+        while (SDL_PollEvent(&e)){
+            if (e.type == SDL_QUIT){
+                quit = true;
+            }
+            if (e.type == SDL_KEYDOWN){
+                quit = true;
+            }
+            if (e.type == SDL_MOUSEBUTTONDOWN){
+                quit = true;
+            }
+        }
+    }
+    //std::cin.get(); 
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
     // write image
     stbi_write_png(fileName.c_str(), nx, ny, numChannels, imgData, nx*numChannels);
 }
+
